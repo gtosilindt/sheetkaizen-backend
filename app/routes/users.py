@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from app.database import database
+from app.database import db
 from app.models.user import UserUpdate
 from app.middleware.auth import get_current_user, require_admin
 from bson import ObjectId
@@ -14,7 +14,7 @@ async def get_users(current_user: dict = Depends(require_admin)):
     cursor = db.users.find({"is_active": True})
     async for user in cursor:
         user["_id"] = str(user["_id"])
-        del user["password_hash"]
+        user.pop("password_hash", None)
         users.append(user)
     return users
 
@@ -25,7 +25,7 @@ async def get_user(user_id: str, current_user: dict = Depends(get_current_user))
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     user["_id"] = str(user["_id"])
-    del user["password_hash"]
+    user.pop("password_hash", None)
     return user
 
 
@@ -43,7 +43,8 @@ async def update_user(user_id: str, update: UserUpdate, current_user: dict = Dep
 @router.delete("/{user_id}")
 async def delete_user(user_id: str, current_user: dict = Depends(require_admin)):
     result = await db.users.update_one(
-        {"_id": ObjectId(user_id)}, {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}}
+        {"_id": ObjectId(user_id)},
+        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Utente non trovato")
