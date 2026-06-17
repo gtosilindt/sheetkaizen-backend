@@ -1,7 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from app.database import db
 from app.models.reparto import RepartoCreate, RepartoUpdate
-from app.middleware.auth import require_admin
 from bson import ObjectId
 from datetime import datetime, timezone
 
@@ -19,7 +18,7 @@ async def get_reparti():
 
 
 @router.post("/")
-async def create_reparto(reparto: RepartoCreate, current_user: dict = Depends(require_admin)):
+async def create_reparto(reparto: RepartoCreate):
     doc = {
         "nome": reparto.nome,
         "linee": [l.dict() for l in reparto.linee],
@@ -32,7 +31,7 @@ async def create_reparto(reparto: RepartoCreate, current_user: dict = Depends(re
 
 
 @router.put("/{reparto_id}")
-async def update_reparto(reparto_id: str, update: RepartoUpdate, current_user: dict = Depends(require_admin)):
+async def update_reparto(reparto_id: str, update: RepartoUpdate):
     update_data = {k: v for k, v in update.dict().items() if v is not None}
     if "linee" in update_data:
         update_data["linee"] = [l if isinstance(l, dict) else l.dict() for l in update_data["linee"]]
@@ -44,6 +43,6 @@ async def update_reparto(reparto_id: str, update: RepartoUpdate, current_user: d
 
 
 @router.delete("/{reparto_id}")
-async def delete_reparto(reparto_id: str, current_user: dict = Depends(require_admin)):
+async def delete_reparto(reparto_id: str):
     await db.reparti.update_one({"_id": ObjectId(reparto_id)}, {"$set": {"is_active": False}})
     return {"message": "Reparto disattivato"}
