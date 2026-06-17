@@ -1,97 +1,129 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from app.database import db
-from app.models.action_plan import ActionPlanCreate, ActionPlanUpdate
-from app.middleware.auth import get_current_user
+from app.models.kaizen import KaizenCreate, KaizenUpdate
 from bson import ObjectId
 from datetime import datetime, timezone
 
 router = APIRouter()
 
 
+async def get_next_numero():
+    last = await db.kaizens.find_one(sort=[("created_at", -1)])
+    if last and "numero" in last:
+        try:
+            num = int(last["numero"].split("-")[1]) + 1
+        except (IndexError, ValueError):
+            num = 1
+    else:
+        num = 1
+    return f"RCA-{num:04d}"
+
+
 @router.get("/")
-async def get_action_plans(current_user: dict = Depends(get_current_user)):
-    query = {}
-    if current_user["role"] == "user":
-        query["$or"] = [
-            {"reparto": current_user["reparto"]},
-            {"responsabile_id": current_user["_id"]},
-        ]
-
-    plans = []
-    cursor = db.action_plans.find(query).sort("data_scadenza", 1)
-    async for plan in cursor:
-        plan["_id"] = str(plan["_id"])
-        plans.append(plan)
-    return plans
+async def get_kaizens():
+    kaizens = []
+    cursor = db.kaizens.find({}).sort("created_at", -1)
+    async for k in cursor:
+        k["_id"] = str(k["_id"])
+        kaizens.append(k)
+    return kaizens
 
 
-@router.get("/my")
-async def get_my_action_plans(current_user: dict = Depends(get_current_user)):
-    plans = []
-    cursor = db.action_plans.find({"responsabile_id": current_user["_id"]}).sort("data_scadenza", 1)
-    async for plan in cursor:
-        plan["_id"] = str(plan["_id"])
-        plans.append(plan)
-    return plans
-
-
-@router.get("/overdue")
-async def get_overdue_plans(current_user: dict = Depends(get_current_user)):
-    now = datetime.now(timezone.utc)
-    query = {"data_scadenza": {"$lt": now}, "stato": {"$ne": "Completato"}}
-    if current_user["role"] == "user":
-        query["reparto"] = current_user["reparto"]
-
-    plans = []
-    cursor = db.action_plans.find(query).sort("data_scadenza", 1)
-    async for plan in cursor:
-        plan["_id"] = str(plan["_id"])
-        plans.append(plan)
-    return plans
-
-
-@router.get("/{plan_id}")
-async def get_action_plan(plan_id: str, current_user: dict = Depends(get_current_user)):
-    plan = await db.action_plans.find_one({"_id": ObjectId(plan_id)})
-    if not plan:
-        raise HTTPException(status_code=404, detail="Action Plan non trovato")
-    plan["_id"] = str(plan["_id"])
-    return plan
+@router.get("/{kaizen_id}")
+async def get_kaizen(kaizen_id: str):
+    kaizen = await db.kaizens.find_one({"_id": ObjectId(kaizen_id)})
+    if not kaizen:
+        raise HTTPException(status_code=404, detail="Kaizen non trovato")
+    kaizen["_id"] = str(kaizen["_id"])
+    return kaizen
 
 
 @router.post("/")
-async def create_action_plan(plan: ActionPlanCreate, current_user: dict = Depends(get_current_user)):
+async def create_kaizen(kaizen: KaizenCreate):
+    numero = await get_next_numero()
+
     doc = {
-        **plan.dict(),
-        "data_emissione": datetime.now(timezone.utc),
-        "data_completamento": None,
-        "stato": "Da Fare",
-        "allegati": [],
-        "created_by": current_user["_id"],
+        "numero": numero,
+        "titolo": kaizen.titolo,
+        "tipo": kaizen.tipo,
+        "stato": "Aperto",
+        "creatore_id": "default",
+        "creatore_nome": "Default User",
+        "partecipanti": kaizen.partecipanti,
+        "reparto": kaizen.reparto,
+        "linea": kaizen.linea,
+        "macchina": kaizen.macchina,
+        "posto": kaizen.posto,
+        "attrezzatura": kaizen.attrezzatura,
+        "team": kaizen.team,
+        "hashtag": kaizen.hashtag,
+        "data_apertura": datetime.now(timezone.utc),
+        "data_chiusura": None,
+        "passo1_definizione": {
+            "immagini": [],
+            "che_cosa": "", "dove": "", "quando": "",
+            "chi": "", "quale": "", "come": "",
+        },
+        "passo2_cause_probabili": {
+            "people": [], "environment": [], "material": [],
+            "measurement": [], "methods": [], "machine": [],
+            "effetto": "",
+        },
+        "passo3_causa_radice": {
+            "causa_probabile": "",
+            "why_chain": [],
+            "causa_radice_finale": "",
+        },
+        "piani_azione_immediati": [],
+        "verifica_processo": {
+            "condizioni_base_rispettate": {"valore": "", "osservazioni": ""},
+            "conoscenza_macchina_processo": {"valore": "", "osservazioni": ""},
+            "standard_esistenti": {"valore": "", "osservazioni": ""},
+            "standard_chiari": {"valore": "", "osservazioni": ""},
+            "standard_applicati": {"valore": "", "osservazioni": ""},
+            "persone_conoscono_standard": {"valore": "", "osservazioni": ""},
+        },
+        "passo4_piani_azione": [],
+        "fase5_valutazione_efficacia": {"osservazioni": "", "efficace": ""},
+        "fase6_standardizzazione": {"osservazioni": "", "standard_creati": [], "replicato_su": []},
+        "lavagna": "",
+        "feed": [{
+            "utente": "Default User",
+            "azione": "Kaizen creato",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }],
+        "campi_custom": {},
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
     }
-    result = await db.action_plans.insert_one(doc)
-    return {"id": str(result.inserted_id), "message": "Action Plan creato"}
+
+    result = await db.kaizens.insert_one(doc)
+    return {"id": str(result.inserted_id), "numero": numero, "message": "Kaizen creato"}
 
 
-@router.put("/{plan_id}")
-async def update_action_plan(plan_id: str, update: ActionPlanUpdate, current_user: dict = Depends(get_current_user)):
+@router.put("/{kaizen_id}")
+async def update_kaizen(kaizen_id: str, update: KaizenUpdate):
     update_data = {k: v for k, v in update.dict().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc)
 
-    if update_data.get("stato") == "Completato" and "data_completamento" not in update_data:
-        update_data["data_completamento"] = datetime.now(timezone.utc)
+    feed_entry = {
+        "utente": "Default User",
+        "azione": "Kaizen aggiornato",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
-    result = await db.action_plans.update_one({"_id": ObjectId(plan_id)}, {"$set": update_data})
+    result = await db.kaizens.update_one(
+        {"_id": ObjectId(kaizen_id)},
+        {"$set": update_data, "$push": {"feed": feed_entry}},
+    )
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Action Plan non trovato")
-    return {"message": "Action Plan aggiornato"}
+        raise HTTPException(status_code=404, detail="Kaizen non trovato")
+    return {"message": "Kaizen aggiornato"}
 
 
-@router.delete("/{plan_id}")
-async def delete_action_plan(plan_id: str, current_user: dict = Depends(get_current_user)):
-    result = await db.action_plans.delete_one({"_id": ObjectId(plan_id)})
+@router.delete("/{kaizen_id}")
+async def delete_kaizen(kaizen_id: str):
+    result = await db.kaizens.delete_one({"_id": ObjectId(kaizen_id)})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Action Plan non trovato")
-    return {"message": "Action Plan eliminato"}
+        raise HTTPException(status_code=404, detail="Kaizen non trovato")
+    return {"message": "Kaizen eliminato"}
