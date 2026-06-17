@@ -21,7 +21,7 @@ async def get_next_numero():
 
 
 @router.get("/")
-async def get_kaizens(current_user: dict = Depends(get_current_user)):
+async def get_kaizens():
     query = {}
     if current_user["role"] == "user":
         query["reparto"] = current_user["reparto"]
