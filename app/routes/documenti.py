@@ -344,3 +344,175 @@ async def delete_documento(documento_id: str):
         {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}}
     )
     return {"message": "Documento disattivato"}
+
+# ============================================================
+# AUTO-IMPORT DA SHAREPOINT (Power Automate)
+# ============================================================
+import os
+import re
+import base64
+from fastapi import Request
+
+@router.post("/sharepoint-import")
+async def import_from_sharepoint(request: Request):
+    """
+    Endpoint chiamato da Power Automate quando viene caricato 
+    un file nella cartella SharePoint monitorata.
+    
+    Convenzione naming file:
+      OPL-2025-001_Titolo_Documento.pdf
+      SOP-2025-014_Avviamento_Linea_3.docx
+    
+    Body JSON atteso:
+    {
+      "filename": "OPL-2025-001_Titolo.pdf",
+      "file_content_base64": "JVBERi0xLjQK...",
+      "sharepoint_url": "https://lindt.sharepoint.com/.../file.pdf",
+      "uploaded_by": "giovanni.tosi@lindt.it",
+      "api_key": "SHEETKAIZEN_SECRET_KEY"
+    }
+    """
+    data = await request.json()
+    
+    # 🔐 Verifica API key
+    expected_key = os.getenv("SHAREPOINT_API_KEY", "")
+    if not expected_key or data.get("api_key") != expected_key:
+        raise HTTPException(status_code=401, detail="API key non valida")
+    
+    filename = data.get("filename", "")
+    file_b64 = data.get("file_content_base64", "")
+    sharepoint_url = data.get("sharepoint_url", "")
+    uploaded_by = data.get("uploaded_by", "SharePoint Auto")
+    
+    if not filename or not file_b64:
+        raise HTTPException(
+            status_code=400, 
+            detail="filename e file_content_base64 obbligatori"
+        )
+    
+    # 📝 Parse del nome file: TIPO-ANNO-NUM_Titolo.ext
+    pattern = r"^(OPL|SOP)-(\d{4}-\d+)_(.+)\.(pdf|docx|xlsx|pptx|png|jpg|jpeg)$"
+    match = re.match(pattern, filename, re.IGNORECASE)
+    
+    if not match:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Nome file non valido. Atteso formato: TIPO-ANNO-NUM_Titolo.ext (es: OPL-2025-001_Pulizia.pdf). Ricevuto: {filename}"
+        )
+    
+    tipo = match.group(1).upper()
+    numero_part = match.group(2)  # es: 2025-001
+    titolo_raw = match.group(3)
+    estensione = match.group(4).lower()
+    
+    titolo = titolo_raw.replace("_", " ").strip()
+    numero_completo = f"{tipo}-{numero_part}"
+    
+    # 🔍 Controllo duplicati → se esiste, nuova versione
+    esistente = await db.documenti.find_one({"numero": numero_completo})
+    nuova_versione = 1
+    versioni_precedenti = []
+    
+    if esistente:
+        nuova_versione = esistente.get("versione", 1) + 1
+        versioni_precedenti = esistente.get("versioni_precedenti", [])
+        versioni_precedenti.append({
+            "versione": esistente.get("versione", 1),
+            "file_id": esistente.get("file_id"),
+            "file_name": esistente.get("file_name"),
+            "data": esistente.get("updated_at"),
+        })
+    
+    # 📦 Decode base64
+    try:
+        file_bytes = base64.b64decode(file_b64)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Base64 non valido: {str(e)}")
+    
+    if len(file_bytes) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File troppo grande (max 50MB)")
+    
+    original_size = len(file_bytes)
+    final_filename = filename
+    compression_info = {}
+    
+    # 🗜️ COMPRESSIONE AUTOMATICA
+    file_bytes, final_filename, compression_info = compress_file(
+        file_bytes, filename, ""
+    )
+    
+    # 💾 Salva su GridFS
+    bucket = get_bucket()
+    file_id = await bucket.upload_from_stream(
+        final_filename,
+        file_bytes,
+        metadata={
+            "content_type": f"application/{estensione}",
+            "uploaded_at": datetime.now(timezone.utc).isoformat(),
+            "source": "sharepoint_auto",
+        }
+    )
+    
+    if esistente:
+        # 🔄 UPDATE documento esistente (nuova versione)
+        await db.documenti.update_one(
+            {"_id": esistente["_id"]},
+            {"$set": {
+                "versione": nuova_versione,
+                "file_id": str(file_id),
+                "file_name": final_filename,
+                "file_name_originale": filename,
+                "file_size": len(file_bytes),
+                "file_size_originale": original_size,
+                "compressione": compression_info,
+                "versioni_precedenti": versioni_precedenti,
+                "stato": "Bozza",  # richiede ri-approvazione
+                "sharepoint_url": sharepoint_url,
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
+        return {
+            "success": True,
+            "documento_id": str(esistente["_id"]),
+            "numero": numero_completo,
+            "versione": nuova_versione,
+            "azione": "nuova_versione",
+            "messaggio": f"Documento {numero_completo} aggiornato a v{nuova_versione}"
+        }
+    else:
+        # ➕ CREATE nuovo documento
+        doc = {
+            "numero": numero_completo,
+            "titolo": titolo,
+            "tipo": tipo,
+            "categoria": "Da classificare",
+            "reparto": "",
+            "linea": "",
+            "macchina": "",
+            "tag": ["auto-import", "sharepoint"],
+            "autore": uploaded_by,
+            "versione": 1,
+            "stato": "Bozza",
+            "file_id": str(file_id),
+            "file_name": final_filename,
+            "file_name_originale": filename,
+            "file_size": len(file_bytes),
+            "file_size_originale": original_size,
+            "compressione": compression_info,
+            "versioni_precedenti": [],
+            "kaizen_collegati": [],
+            "source": "sharepoint_auto",
+            "sharepoint_url": sharepoint_url,
+            "is_active": True,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        result = await db.documenti.insert_one(doc)
+        return {
+            "success": True,
+            "documento_id": str(result.inserted_id),
+            "numero": numero_completo,
+            "versione": 1,
+            "azione": "creato",
+            "messaggio": f"Documento {numero_completo} importato"
+        }
