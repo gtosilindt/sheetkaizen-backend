@@ -219,7 +219,12 @@ async def upload_new_version(documento_id: str, file: UploadFile = File(...)):
 # DOWNLOAD
 # ============================================================
 @router.get("/{documento_id}/file")
-async def download_file(documento_id: str):
+async def download_file(documento_id: str, download: bool = False):
+    """
+    Restituisce il file del documento.
+    - download=true → Content-Disposition: attachment (forza download)
+    - download=false (default) → inline (preview nel browser)
+    """
     doc = await db.documenti.find_one({"_id": ObjectId(documento_id)})
     if not doc or not doc.get("file_id"):
         raise HTTPException(status_code=404, detail="File non trovato")
@@ -231,38 +236,15 @@ async def download_file(documento_id: str):
             if stream.metadata else "application/octet-stream"
         )
         data = await stream.read()
+        disposition = "attachment" if download else "inline"
+        filename = doc.get("file_name", "documento")
         return StreamingResponse(
             io.BytesIO(data),
             media_type=content_type,
-            headers={"Content-Disposition": f'inline; filename="{doc.get("file_name", "documento")}"'},
-        )
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"File non trovato: {str(e)}")
-
-
-@router.get("/{documento_id}/version/{versione}")
-async def download_version(documento_id: str, versione: int):
-    doc = await db.documenti.find_one({"_id": ObjectId(documento_id)})
-    if not doc:
-        raise HTTPException(status_code=404, detail="Documento non trovato")
-    if doc.get("versione") == versione:
-        return await download_file(documento_id)
-    versioni = doc.get("versioni_precedenti", [])
-    target = next((v for v in versioni if v["versione"] == versione), None)
-    if not target:
-        raise HTTPException(status_code=404, detail=f"Versione {versione} non trovata")
-    bucket = get_bucket()
-    try:
-        stream = await bucket.open_download_stream(ObjectId(target["file_id"]))
-        content_type = (
-            stream.metadata.get("content_type", "application/octet-stream")
-            if stream.metadata else "application/octet-stream"
-        )
-        data = await stream.read()
-        return StreamingResponse(
-            io.BytesIO(data),
-            media_type=content_type,
-            headers={"Content-Disposition": f'inline; filename="{target.get("file_name", "documento")}"'},
+            headers={
+                "Content-Disposition": f'{disposition}; filename="{filename}"',
+                "Access-Control-Allow-Origin": "*",  # serve a Office Viewer
+            },
         )
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"File non trovato: {str(e)}")
