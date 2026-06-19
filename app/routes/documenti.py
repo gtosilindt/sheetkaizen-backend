@@ -245,6 +245,7 @@ async def upload_new_version(
             "compressione": compression_info,
             "versioni_precedenti": versioni_precedenti,
             "stato": "In Revisione",
+            "is_active": True,
             "updated_at": datetime.now(timezone.utc),
         }}
     )
@@ -391,6 +392,7 @@ async def bulk_upload_documenti(
                         "compressione": compression_info,
                         "versioni_precedenti": versioni_precedenti,
                         "stato": "Bozza",
+                        "is_active": True,
                         "updated_at": datetime.now(timezone.utc),
                     }}
                 )
