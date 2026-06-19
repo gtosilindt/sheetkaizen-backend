@@ -340,6 +340,9 @@ async def bulk_upload_documenti(
                 titolo = filename_no_ext.replace("_", " ").replace("-", " ").strip()
                 numero_completo = await get_next_numero(tipo)
                 auto_parsed = False
+           
+            # 🪣 Bucket GridFS (deve essere accessibile nel loop)
+            bucket = get_bucket()
             
             # 🔍 Controllo duplicati
             esistente = await db.documenti.find_one({"numero": numero_completo})
