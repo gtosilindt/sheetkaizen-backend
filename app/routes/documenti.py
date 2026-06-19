@@ -287,9 +287,14 @@ async def bulk_upload_documenti(
     }
     
     # Pattern per parsing nome file
-    pattern = r"^(OPL|SOP|PROC|IST)-(\d{4})-(\d+)_(.+?)\.(pdf|docx|xlsx|pptx|png|jpg|jpeg|doc|xls|ppt)$"
-    
-    bucket = get_bucket()
+    # Pattern intelligente: cerca TIPO (OPL/SOP/PROC/IST) seguito da numero
+    # Esempi che riconosce:
+    #   OPL-2026-001_Pulizia.pdf
+    #   CO COZ8C P OPL 254 1 Piatto raccolta Betti.pdf
+    #   SOP 014 Avviamento Linea.docx
+    #   opl_125_pulizia.pdf
+    pattern_smart = r"(?i)\b(OPL|SOP|PROC|IST)\b[\s_\-]*(\d{1,5})"
+    tipo_map = {"OPL": "OPL", "SOP": "SOP", "PROC": "Procedura", "IST": "Istruzione"}
     
     for file in files:
         try:
@@ -303,25 +308,36 @@ async def bulk_upload_documenti(
             
             original_size = len(contents)
             
-            # 🔍 Parsing nome file
-            match = re.match(pattern, file.filename, re.IGNORECASE)
+            # 🔍 Parsing intelligente
+            # Rimuovi estensione per il parsing
+            filename_no_ext = file.filename.rsplit(".", 1)[0] if "." in file.filename else file.filename
+            ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else "pdf"
+            
+            match = re.search(pattern_smart, filename_no_ext)
             
             if match:
-                # ✅ Nome conforme — estrai metadati
+                # ✅ Trovato TIPO + numero nel nome
                 tipo_raw = match.group(1).upper()
-                tipo_map = {"OPL": "OPL", "SOP": "SOP", "PROC": "Procedura", "IST": "Istruzione"}
                 tipo = tipo_map.get(tipo_raw, "OPL")
+                numero_estratto = match.group(2)
+                numero_completo = f"{tipo_raw}-{numero_estratto.zfill(3)}"  # es: OPL-254 o OPL-001
                 
-                anno = match.group(2)
-                num = match.group(3)
-                titolo_raw = match.group(4)
-                titolo = titolo_raw.replace("_", " ").strip()
-                numero_completo = f"{tipo_raw}-{anno}-{num}"
+                # Estrai titolo: rimuovi la parte "TIPO numero" e pulisci
+                titolo_raw = re.sub(pattern_smart, "", filename_no_ext, count=1)
+                # Rimuovi caratteri spuri all'inizio (spazi, trattini, underscore, numeri isolati iniziali)
+                titolo_raw = re.sub(r"^[\s_\-]+", "", titolo_raw)
+                # Sostituisci underscore con spazi e collassa spazi multipli
+                titolo = re.sub(r"\s+", " ", titolo_raw.replace("_", " ")).strip()
+                
+                # Se il titolo è vuoto, usa il filename completo come fallback
+                if not titolo:
+                    titolo = filename_no_ext.replace("_", " ").strip()
+                
                 auto_parsed = True
             else:
-                # ⚠️ Nome non conforme — usa filename come titolo
+                # ⚠️ Nessun pattern trovato — usa filename come titolo
                 tipo = "OPL"
-                titolo = file.filename.rsplit(".", 1)[0].replace("_", " ").replace("-", " ")
+                titolo = filename_no_ext.replace("_", " ").replace("-", " ").strip()
                 numero_completo = await get_next_numero(tipo)
                 auto_parsed = False
             
