@@ -5,16 +5,13 @@ from datetime import datetime
 
 # Tipologie supportate dal sistema Settings
 TIPO_CONFIG = Literal[
-    "reparti",
-    "linee",
-    "macchine",
-    "tipi_kaizen",
-    "categorie_action_plan",
-    "tipi_action_plan",
-    "categorie_documento",
-    "argomenti",
-    "categorie_perdita",
-    "tipi_perdita",
+    "tipi_action_plan",        
+    "ap_5m",                   # Man, Machine, Method, Material, Measurement
+    "priorita_ap",             # Low, Medium, High, Critical
+    "stato_ap",                # Da Valutare, Aperto, In Corso, In Verifica, Done
+    "categorie_documento",     # OPL, SOP
+    "categorie_perdita",       
+    "argomenti",               
 ]
 
 
