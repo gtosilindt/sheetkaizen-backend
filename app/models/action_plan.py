@@ -60,6 +60,9 @@ class ActionPlanCreate(BaseModel):
     priorita: Optional[PRIORITA] = "Medium"
     stato: Optional[STATO] = "Backlog"
     categoria: Optional[str] = None
+    tipo_perdita: Optional[str] = None
+    kaizen_id: Optional[str] = None
+
     
     # Tags & mentions (estratti dalla descrizione + manuali)
     tags: List[str] = []
@@ -100,6 +103,8 @@ class ActionPlanUpdate(BaseModel):
     priorita: Optional[PRIORITA] = None
     stato: Optional[STATO] = None
     categoria: Optional[str] = None
+    tipo_perdita: Optional[str] = None
+    kaizen_id: Optional[str] = None
     
     tags: Optional[List[str]] = None
     mentions: Optional[List[str]] = None
