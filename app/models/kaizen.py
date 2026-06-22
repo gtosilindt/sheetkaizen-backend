@@ -31,6 +31,9 @@ class KaizenCreate(BaseModel):
     # 🆕 Tipo perdita TPM (riferimento alle Settings)
     tipo_perdita: Optional[str] = None
     categoria: Optional[str] = None
+    
+    # 🆕 Pillar di appartenenza
+    pillar_id: Optional[str] = None
 
 
 class KaizenUpdate(BaseModel):
@@ -51,6 +54,9 @@ class KaizenUpdate(BaseModel):
     # 🆕 Tipo perdita TPM + categoria
     tipo_perdita: Optional[str] = None
     categoria: Optional[str] = None
+    
+    # 🆕 Pillar di appartenenza
+    pillar_id: Optional[str] = None
     
     # 🆕 Gerarchia (per linkare/slinkare un padre)
     parent_kaizen_id: Optional[str] = None
