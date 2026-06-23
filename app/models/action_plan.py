@@ -56,12 +56,27 @@ class LinkEntita(BaseModel):
 class ActionPlanCreate(BaseModel):
     titolo: str
     descrizione: Optional[str] = ""
+    
+    # === CLASSIFICAZIONE (configurabili da Settings) ===
     tipo: Optional[TIPO_AP] = "Task"
     priorita: Optional[PRIORITA] = "Medium"
     stato: Optional[STATO] = "Da Valutare"
-    categoria: Optional[str] = None
-    tipo_perdita: Optional[str] = None
-    kaizen_id: Optional[str] = None
+    categoria_perdita: Optional[str] = None       # 🆕 ex tipo_perdita (rinominato)
+    
+    # === HARD-CODED ===
+    quinta_m: Optional[Literal["Machine", "Manodopera", "Metodo", "Materiale", "Misurazione"]] = None  # 🆕 5M Ishikawa
+    
+    # === CONTESTO / PARENT ENTITY ===
+    parent_type: Optional[Literal["kaizen", "pillar", "dashboard", "standalone"]] = "standalone"  # 🆕
+    parent_id: Optional[str] = None               # ID del Kaizen/Pillar/Dashboard padre
+    parent_label: Optional[str] = None            # 🆕 Nome leggibile (es. "KAI-0005", "FI", "PCS")
+    pillar_id: Optional[str] = None               # 🆕 Pillar (sempre valorizzato anche transitively da Kaizen)
+    dashboard_id: Optional[str] = None            # 🆕 Dashboard di appartenenza
+    
+    # === LEGACY (manteniamo per backward compat, ma deprecato) ===
+    kaizen_id: Optional[str] = None               # ⚠️ Deprecato: usa parent_type=kaizen + parent_id
+    categoria: Optional[str] = None               # ⚠️ Deprecato: usa categoria_perdita
+    tipo_perdita: Optional[str] = None            # ⚠️ Deprecato: rinominato categoria_perdita
     
     # Tags & mentions
     tags: List[str] = []
@@ -98,12 +113,25 @@ class ActionPlanCreate(BaseModel):
 class ActionPlanUpdate(BaseModel):
     titolo: Optional[str] = None
     descrizione: Optional[str] = None
+    
+    # Classificazione
     tipo: Optional[TIPO_AP] = None
     priorita: Optional[PRIORITA] = None
     stato: Optional[STATO] = None
-    categoria: Optional[str] = None
-    tipo_perdita: Optional[str] = None
-    kaizen_id: Optional[str] = None
+    categoria_perdita: Optional[str] = None       # 🆕 ex tipo_perdita
+    quinta_m: Optional[Literal["Machine", "Manodopera", "Metodo", "Materiale", "Misurazione"]] = None  # 🆕
+    
+    # Contesto
+    parent_type: Optional[Literal["kaizen", "pillar", "dashboard", "standalone"]] = None  # 🆕
+    parent_id: Optional[str] = None               # 🆕
+    parent_label: Optional[str] = None            # 🆕
+    pillar_id: Optional[str] = None               # 🆕
+    dashboard_id: Optional[str] = None            # 🆕
+    
+    # Legacy
+    categoria: Optional[str] = None               # ⚠️ Deprecato
+    tipo_perdita: Optional[str] = None            # ⚠️ Deprecato
+    kaizen_id: Optional[str] = None               # ⚠️ Deprecato
     
     tags: Optional[List[str]] = None
     mentions: Optional[List[str]] = None
