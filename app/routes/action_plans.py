@@ -361,9 +361,9 @@ async def create_action_plan(plan: ActionPlanCreate):
         "titolo": plan.titolo,
         "descrizione": plan.descrizione or "",
         
-        "tipo": plan.tipo or "Task",
-        "priorita": plan.priorita or "Medium",
-        "stato": plan.stato or "Da Valutare",
+        "tipo": plan.tipo or None,
+        "priorita": plan.priorita or None,
+        "stato": plan.stato or None,
         "categoria_perdita": plan.categoria_perdita or plan.tipo_perdita,
         "quinta_m": plan.quinta_m,
         
