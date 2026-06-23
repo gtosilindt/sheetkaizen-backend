@@ -30,7 +30,7 @@ class Commento(BaseModel):
     mentions: List[str] = []
     timestamp: Optional[datetime] = None
     edited_at: Optional[datetime] = None
-    reactions: List[dict] = []  # [{emoji, users:[]}]
+    reactions: List[dict] = []
 
 
 class Allegato(BaseModel):
@@ -61,22 +61,22 @@ class ActionPlanCreate(BaseModel):
     tipo: Optional[TIPO_AP] = "Task"
     priorita: Optional[PRIORITA] = "Medium"
     stato: Optional[STATO] = "Da Valutare"
-    categoria_perdita: Optional[str] = None       # 🆕 ex tipo_perdita (rinominato)
+    categoria_perdita: Optional[str] = None
     
     # === HARD-CODED ===
-    quinta_m: Optional[Literal["Machine", "Manodopera", "Metodo", "Materiale", "Misurazione"]] = None  # 🆕 5M Ishikawa
+    quinta_m: Optional[Literal["Machine", "Manodopera", "Metodo", "Materiale", "Misurazione"]] = None
     
     # === CONTESTO / PARENT ENTITY ===
-    parent_type: Optional[Literal["kaizen", "pillar", "dashboard", "standalone"]] = "standalone"  # 🆕
-    parent_id: Optional[str] = None               # ID del Kaizen/Pillar/Dashboard padre
-    parent_label: Optional[str] = None            # 🆕 Nome leggibile (es. "KAI-0005", "FI", "PCS")
-    pillar_id: Optional[str] = None               # 🆕 Pillar (sempre valorizzato anche transitively da Kaizen)
-    dashboard_id: Optional[str] = None            # 🆕 Dashboard di appartenenza
+    parent_type: Optional[Literal["kaizen", "pillar", "dashboard", "standalone"]] = "standalone"
+    parent_id: Optional[str] = None
+    parent_label: Optional[str] = None
+    pillar_id: Optional[str] = None
+    dashboard_id: Optional[str] = None
     
-    # === LEGACY (manteniamo per backward compat, ma deprecato) ===
-    kaizen_id: Optional[str] = None               # ⚠️ Deprecato: usa parent_type=kaizen + parent_id
-    categoria: Optional[str] = None               # ⚠️ Deprecato: usa categoria_perdita
-    tipo_perdita: Optional[str] = None            # ⚠️ Deprecato: rinominato categoria_perdita
+    # === LEGACY (deprecato) ===
+    kaizen_id: Optional[str] = None
+    categoria: Optional[str] = None
+    tipo_perdita: Optional[str] = None
     
     # Tags & mentions
     tags: List[str] = []
@@ -97,9 +97,6 @@ class ActionPlanCreate(BaseModel):
     data_inizio: Optional[datetime] = None
     data_scadenza: Optional[datetime] = None
     
-    # Hierarchy
-    parent_id: Optional[str] = None
-    
     # Polymorphic links
     links: List[LinkEntita] = []
     
@@ -118,20 +115,20 @@ class ActionPlanUpdate(BaseModel):
     tipo: Optional[TIPO_AP] = None
     priorita: Optional[PRIORITA] = None
     stato: Optional[STATO] = None
-    categoria_perdita: Optional[str] = None       # 🆕 ex tipo_perdita
-    quinta_m: Optional[Literal["Machine", "Manodopera", "Metodo", "Materiale", "Misurazione"]] = None  # 🆕
+    categoria_perdita: Optional[str] = None
+    quinta_m: Optional[Literal["Machine", "Manodopera", "Metodo", "Materiale", "Misurazione"]] = None
     
     # Contesto
-    parent_type: Optional[Literal["kaizen", "pillar", "dashboard", "standalone"]] = None  # 🆕
-    parent_id: Optional[str] = None               # 🆕
-    parent_label: Optional[str] = None            # 🆕
-    pillar_id: Optional[str] = None               # 🆕
-    dashboard_id: Optional[str] = None            # 🆕
+    parent_type: Optional[Literal["kaizen", "pillar", "dashboard", "standalone"]] = None
+    parent_id: Optional[str] = None
+    parent_label: Optional[str] = None
+    pillar_id: Optional[str] = None
+    dashboard_id: Optional[str] = None
     
     # Legacy
-    categoria: Optional[str] = None               # ⚠️ Deprecato
-    tipo_perdita: Optional[str] = None            # ⚠️ Deprecato
-    kaizen_id: Optional[str] = None               # ⚠️ Deprecato
+    categoria: Optional[str] = None
+    tipo_perdita: Optional[str] = None
+    kaizen_id: Optional[str] = None
     
     tags: Optional[List[str]] = None
     mentions: Optional[List[str]] = None
@@ -152,3 +149,7 @@ class ActionPlanUpdate(BaseModel):
     
     is_blocked: Optional[bool] = None
     blocking_reason: Optional[str] = None
+    
+    # 🆕 CANCELLAZIONE (annullamento logico — diverso da is_active soft delete)
+    is_cancelled: Optional[bool] = None
+    cancelled_reason: Optional[str] = None
