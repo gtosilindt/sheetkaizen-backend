@@ -102,6 +102,11 @@ class ActionPlanCreate(BaseModel):
     
     # Initial checklist
     checklist: List[ChecklistItem] = []
+    
+    # 🆕 Gantt fields
+    dependencies: List[str] = []           # IDs di altri AP da cui dipende
+    gantt_progress: Optional[int] = 0      # % completamento (0-100)
+    gantt_milestone: Optional[bool] = False  # True se è un milestone (evento puntuale)
 
 
 # ============================================================
@@ -153,3 +158,8 @@ class ActionPlanUpdate(BaseModel):
     # 🆕 CANCELLAZIONE (annullamento logico — diverso da is_active soft delete)
     is_cancelled: Optional[bool] = None
     cancelled_reason: Optional[str] = None
+    
+    # 🆕 Gantt fields
+    dependencies: Optional[List[str]] = None
+    gantt_progress: Optional[int] = None
+    gantt_milestone: Optional[bool] = None
