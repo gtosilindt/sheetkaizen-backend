@@ -107,7 +107,7 @@ class ActionPlanCreate(BaseModel):
     dependencies: List[str] = []           # IDs di altri AP da cui dipende
     gantt_progress: Optional[int] = 0      # % completamento (0-100)
     gantt_milestone: Optional[bool] = False  # True se è un milestone (evento puntuale)
-
+    gant_step_id: Optional[str] = None     # 🆕 ID dello step del Gant macro a cui appartiene questa azione
 
 # ============================================================
 # UPDATE
@@ -163,3 +163,4 @@ class ActionPlanUpdate(BaseModel):
     dependencies: Optional[List[str]] = None
     gantt_progress: Optional[int] = None
     gantt_milestone: Optional[bool] = None
+    gant_step_id: Optional[str] = None     # 🆕 step del Gant macro
