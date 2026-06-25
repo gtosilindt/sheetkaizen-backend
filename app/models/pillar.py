@@ -109,6 +109,9 @@ class PillarCreate(BaseModel):
     
     # Note iniziali
     note: Optional[str] = ""
+    
+    # 🆕 Calendario presenze (opzionale)
+    presenze_config: Optional[Dict[str, Any]] = None
 
 
 class PillarUpdate(BaseModel):
@@ -137,6 +140,9 @@ class PillarUpdate(BaseModel):
     
     # Maturity Grid (futuro F-X)
     maturity_grid: Optional[Dict[str, Any]] = None
+    
+    # 🆕 Calendario presenze riunioni pillar
+    presenze_config: Optional[Dict[str, Any]] = None
     
     # Stato pillar
     attivo: Optional[bool] = None
