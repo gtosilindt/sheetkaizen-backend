@@ -97,6 +97,7 @@ class PillarCreate(BaseModel):
     label: str  # es: "Focused Improvement"
     descrizione: Optional[str] = ""
     icon: Optional[str] = None
+    icon_image: Optional[str] = None  # 🆕 base64 dell'immagine
     color: Optional[str] = None
     
     # Leader e team
@@ -119,6 +120,7 @@ class PillarUpdate(BaseModel):
     label: Optional[str] = None
     descrizione: Optional[str] = None
     icon: Optional[str] = None
+    icon_image: Optional[str] = None  # 🆕 base64 dell'immagine
     color: Optional[str] = None
     
     leader: Optional[str] = None
