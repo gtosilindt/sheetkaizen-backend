@@ -26,6 +26,7 @@ class ConfigurazioneCreate(BaseModel):
     parent_tipo: Optional[str] = None
     ordine: Optional[int] = 0
     attivo: Optional[bool] = True
+    is_terminal: Optional[bool] = False
     metadata: Optional[dict] = {}
 
 
@@ -39,6 +40,7 @@ class ConfigurazioneUpdate(BaseModel):
     parent_tipo: Optional[str] = None
     ordine: Optional[int] = None
     attivo: Optional[bool] = None
+    is_terminal: Optional[bool] = None
     metadata: Optional[dict] = None
 
 
