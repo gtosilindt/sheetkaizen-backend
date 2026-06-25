@@ -900,3 +900,62 @@ async def unlink_kaizen_from_ap(plan_id: str, kaizen_id: str):
     )
     
     return {"message": f"Action Plan scollegato da {kaizen_numero}"}
+
+# ──────────────────────────────────────────
+# ALLEGATI
+# ──────────────────────────────────────────
+
+class AllegatoPayload(BaseModel):
+    nome: str
+    tipo: str  # "image/jpeg", "application/pdf", ecc.
+    dimensione: int  # in bytes
+    data: str  # base64 con prefisso "data:..." già incluso
+    autore: Optional[str] = "Default User"
+
+
+@router.post("/{plan_id}/allegati")
+async def add_allegato(plan_id: str, payload: AllegatoPayload):
+    """Aggiunge un allegato (base64) all'AP."""
+    plan = await get_collection().find_one({"_id": ObjectId(plan_id)})
+    if not plan:
+        raise HTTPException(404, "Action Plan non trovato")
+
+    allegati = plan.get("allegati", [])
+
+    # Limite max 10 allegati per AP
+    if len(allegati) >= 10:
+        raise HTTPException(400, "Massimo 10 allegati per Action Plan")
+
+    nuovo_allegato = {
+        "id": str(ObjectId()),
+        "nome": payload.nome,
+        "tipo": payload.tipo,
+        "dimensione": payload.dimensione,
+        "data": payload.data,
+        "autore": payload.autore,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await get_collection().update_one(
+        {"_id": ObjectId(plan_id)},
+        {
+            "$push": {"allegati": nuovo_allegato},
+            "$set": {"updated_at": datetime.now(timezone.utc)},
+        },
+    )
+    return {"success": True, "allegato_id": nuovo_allegato["id"]}
+
+
+@router.delete("/{plan_id}/allegati/{allegato_id}")
+async def remove_allegato(plan_id: str, allegato_id: str):
+    """Rimuove un allegato dall'AP."""
+    result = await get_collection().update_one(
+        {"_id": ObjectId(plan_id)},
+        {
+            "$pull": {"allegati": {"id": allegato_id}},
+            "$set": {"updated_at": datetime.now(timezone.utc)},
+        },
+    )
+    if result.modified_count == 0:
+        raise HTTPException(404, "Allegato non trovato")
+    return {"success": True}
