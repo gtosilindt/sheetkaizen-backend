@@ -996,9 +996,13 @@ class AllegatoPayload(BaseModel):
 @router.post("/{plan_id}/allegati")
 async def add_allegato(plan_id: str, payload: AllegatoPayload):
     """Aggiunge un allegato (base64) all'AP."""
-    plan = await get_collection().find_one({"_id": ObjectId(plan_id)})
+    plan = await db.action_plans.find_one({"_id": ObjectId(plan_id)})
     if not plan:
         raise HTTPException(404, "Action Plan non trovato")
+
+    # Lock: blocca upload se AP è chiuso
+    if await is_ap_locked(plan):
+        raise HTTPException(403, "Action Plan chiuso. Riaprilo per aggiungere allegati.")
 
     allegati = plan.get("allegati", [])
 
@@ -1016,7 +1020,7 @@ async def add_allegato(plan_id: str, payload: AllegatoPayload):
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
-    await get_collection().update_one(
+    await db.action_plans.update_one(
         {"_id": ObjectId(plan_id)},
         {
             "$push": {"allegati": nuovo_allegato},
@@ -1029,7 +1033,11 @@ async def add_allegato(plan_id: str, payload: AllegatoPayload):
 @router.delete("/{plan_id}/allegati/{allegato_id}")
 async def remove_allegato(plan_id: str, allegato_id: str):
     """Rimuove un allegato dall'AP."""
-    result = await get_collection().update_one(
+    ap = await db.action_plans.find_one({"_id": ObjectId(plan_id)})
+    if ap and await is_ap_locked(ap):
+        raise HTTPException(403, "Action Plan chiuso. Riaprilo per rimuovere allegati.")
+
+    result = await db.action_plans.update_one(
         {"_id": ObjectId(plan_id)},
         {
             "$pull": {"allegati": {"id": allegato_id}},
