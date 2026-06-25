@@ -145,6 +145,7 @@ async def create_configurazione(conf: ConfigurazioneCreate):
         "parent_tipo": conf.parent_tipo,
         "ordine": ordine,
         "attivo": conf.attivo if conf.attivo is not None else True,
+        "is_terminal": conf.is_terminal or False,
         "metadata": conf.metadata or {},
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
