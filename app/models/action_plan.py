@@ -84,9 +84,12 @@ class ActionPlanCreate(BaseModel):
     
     # Assignment
     responsabile: Optional[str] = None
+    responsabile_id: Optional[str] = None  # 🆕 ID utente per link a User entity
     responsabile_email: Optional[str] = None
     reporter: Optional[str] = None
+    reporter_id: Optional[str] = None  # 🆕 ID utente reporter
     watchers: List[str] = []
+    watchers_ids: List[str] = []  # 🆕 IDs degli utenti watchers
     
     # Location
     reparto: Optional[str] = None
@@ -142,9 +145,12 @@ class ActionPlanUpdate(BaseModel):
     mentions: Optional[List[str]] = None
     
     responsabile: Optional[str] = None
+    responsabile_id: Optional[str] = None  # 🆕
     responsabile_email: Optional[str] = None
     reporter: Optional[str] = None
+    reporter_id: Optional[str] = None  # 🆕
     watchers: Optional[List[str]] = None
+    watchers_ids: Optional[List[str]] = None  # 🆕
     
     reparto: Optional[str] = None
     linea: Optional[str] = None
