@@ -100,6 +100,14 @@ async def update_user(user_id: str, payload: UserUpdate):
     if "role" in updates and updates["role"] not in VALID_ROLES:
         raise HTTPException(400, f"Ruolo non valido. Validi: {VALID_ROLES}")
 
+    # 🆕 HASH password se presente (cambio password)
+    if "password" in updates:
+        new_password = updates.pop("password")
+        if new_password:  # solo se non vuota
+            if len(new_password) < 4:
+                raise HTTPException(400, "Password troppo corta (min 4 caratteri)")
+            updates["password_hash"] = hash_password(new_password)
+
     updates["updated_at"] = datetime.now(timezone.utc)
 
     await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
