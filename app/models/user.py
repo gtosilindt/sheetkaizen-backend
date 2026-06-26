@@ -163,3 +163,27 @@ class UserRole(BaseModel):
     """Ruolo utente."""
     name: str
     permissions: List[str] = []
+
+# ──────────────────────────────────────────
+# FUNZIONI HELPER (per auth.py)
+# ──────────────────────────────────────────
+
+import bcrypt
+
+
+def hash_password(plain_password: str) -> str:
+    """Hash di una password con bcrypt."""
+    return bcrypt.hashpw(plain_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verifica una password contro il suo hash."""
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception:
+        return False
+
+
+def get_password_hash(plain_password: str) -> str:
+    """Alias di hash_password (per compatibilità)."""
+    return hash_password(plain_password)
