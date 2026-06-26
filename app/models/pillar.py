@@ -102,8 +102,10 @@ class PillarCreate(BaseModel):
     
     # Leader e team
     leader: Optional[str] = None
+    leader_id: Optional[str] = None  # 🆕 ID utente
     leader_email: Optional[str] = None
-    members: List[str] = []  # lista nomi
+    members: List[str] = []  # lista nomi (legacy + cache)
+    members_ids: List[str] = []  # 🆕 IDs degli utenti membri
     
     # Anno corrente di riferimento
     anno: Optional[int] = None  # se vuoto, usa anno corrente
@@ -124,8 +126,10 @@ class PillarUpdate(BaseModel):
     color: Optional[str] = None
     
     leader: Optional[str] = None
+    leader_id: Optional[str] = None  # 🆕
     leader_email: Optional[str] = None
     members: Optional[List[str]] = None
+    members_ids: Optional[List[str]] = None  # 🆕
     
     anno: Optional[int] = None
     note: Optional[str] = None
