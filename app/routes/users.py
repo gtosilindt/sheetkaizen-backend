@@ -7,7 +7,7 @@ import bcrypt
 from app.database import get_db
 from app.models.user import UserCreate, UserUpdate, UserLogin, UserPublic
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter()
 
 
 def get_collection():
