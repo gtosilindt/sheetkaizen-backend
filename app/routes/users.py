@@ -144,3 +144,40 @@ async def switch_user(username: str):
         "user": _user_to_public(user).model_dump(),
         "token": f"demo-token-{str(user['_id'])}",
     }
+# ──────────────────────────────────────────
+# RESET PASSWORD (admin endpoint, garantito)
+# ──────────────────────────────────────────
+
+from pydantic import BaseModel
+from app.models.user import hash_password
+
+
+class PasswordResetPayload(BaseModel):
+    new_password: str
+
+
+@router.post("/{user_id}/reset-password")
+async def admin_reset_password(user_id: str, payload: PasswordResetPayload):
+    """
+    Reset password di un utente (endpoint admin dedicato).
+    Garantito di hashare correttamente la password.
+    """
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(404, "Utente non trovato")
+
+    if len(payload.new_password) < 4:
+        raise HTTPException(400, "Password troppo corta")
+
+    # Hash bcrypt sicuro
+    new_hash = hash_password(payload.new_password)
+
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {
+            "password_hash": new_hash,
+            "updated_at": datetime.now(timezone.utc),
+        }}
+    )
+
+    return {"success": True, "message": "Password resettata con successo"}
