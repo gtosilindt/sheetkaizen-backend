@@ -2,6 +2,13 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
 
+class DashboardTab(BaseModel):
+    id: str
+    titolo: str
+    ordine: int = 0
+    layout: List[Dict[str, Any]] = []
+
+
 class DashboardCreate(BaseModel):
     nome: str
     titolo_pagina: Optional[str] = None
@@ -10,6 +17,7 @@ class DashboardCreate(BaseModel):
     reparto: Optional[str] = None
     visibilita: str = "pubblico"
     layout: List[Dict[str, Any]] = []
+    tabs: List[DashboardTab] = []
     utenti_autorizzati_ids: List[str] = []
     utenti_autorizzati_nomi: List[str] = []
 
@@ -22,5 +30,6 @@ class DashboardUpdate(BaseModel):
     reparto: Optional[str] = None
     visibilita: Optional[str] = None
     layout: Optional[List[Dict[str, Any]]] = None
+    tabs: Optional[List[DashboardTab]] = None
     utenti_autorizzati_ids: Optional[List[str]] = None
     utenti_autorizzati_nomi: Optional[List[str]] = None
