@@ -181,21 +181,21 @@ async def get_action_plans(
     tipo: Optional[List[str]] = Query(None),
     priorita: Optional[List[str]] = Query(None),
     categoria: Optional[str] = Query(None),
-    categoria_perdita: Optional[str] = Query(None),
-    quinta_m: Optional[str] = Query(None),
+    categoria_perdita: Optional[List[str]] = Query(None),
+    quinta_m: Optional[List[str]] = Query(None),
     
     # Filtri assegnazione
-    responsabile: Optional[str] = Query(None),
+    responsabile: Optional[List[str]] = Query(None),
     
     # Filtri struttura aziendale
-    reparto: Optional[str] = Query(None),
-    linea: Optional[str] = Query(None),
-    macchina: Optional[str] = Query(None),
+    reparto: Optional[List[str]] = Query(None),
+    linea: Optional[List[str]] = Query(None),
+    macchina: Optional[List[str]] = Query(None),
     
     # Filtri parent / contesto
     parent_type: Optional[List[str]] = Query(None),
-    pillar_id: Optional[str] = Query(None),
-    dashboard_id: Optional[str] = Query(None),
+    pillar_id: Optional[List[str]] = Query(None),
+    dashboard_id: Optional[List[str]] = Query(None),
     gant_step_id: Optional[str] = Query(None),  # 🆕 filtro per step del Gant
     
     # 🆕 Filtro cancellati
@@ -229,21 +229,21 @@ async def get_action_plans(
     if categoria:
         query["categoria"] = categoria
     if categoria_perdita:
-        query["categoria_perdita"] = categoria_perdita
+        query["categoria_perdita"] = {"$in": categoria_perdita}
     if quinta_m:
-        query["quinta_m"] = quinta_m
+        query["quinta_m"] = {"$in": quinta_m}
     
     # Assegnazione
     if responsabile:
-        query["responsabile"] = responsabile
+        query["responsabile"] = {"$in": responsabile}
     
     # Struttura aziendale
     if reparto:
-        query["reparto"] = reparto
+        query["reparto"] = {"$in": reparto}
     if linea:
-        query["linea"] = linea
+        query["linea"] = {"$in": linea}
     if macchina:
-        query["macchina"] = macchina
+        query["macchina"] = {"$in": macchina}
     
     # Contesto / parent
     if parent_type:
@@ -266,9 +266,9 @@ async def get_action_plans(
         elif parent_conditions:
             query["$and"] = query.get("$and", []) + [{"$or": parent_conditions}]
     if pillar_id:
-        query["pillar_id"] = pillar_id
+        query["pillar_id"] = {"$in": pillar_id}
     if dashboard_id:
-        query["dashboard_id"] = dashboard_id
+        query["dashboard_id"] = {"$in": dashboard_id}
     if gant_step_id:
         # Filtro speciale: 'none' = standalone (AP senza step), altrimenti id step preciso
         if gant_step_id == 'none':
