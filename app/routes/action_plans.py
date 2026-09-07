@@ -7,7 +7,7 @@ from app.models.action_plan import (
 )
 from bson import ObjectId
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 import re
 import uuid
@@ -177,9 +177,9 @@ def enrich_plan(plan: dict) -> dict:
 @router.get("/")
 async def get_action_plans(
     # Filtri classificazione
-    stato: Optional[str] = Query(None),
-    tipo: Optional[str] = Query(None),
-    priorita: Optional[str] = Query(None),
+    stato: Optional[List[str]] = Query(None),
+    tipo: Optional[List[str]] = Query(None),
+    priorita: Optional[List[str]] = Query(None),
     categoria: Optional[str] = Query(None),
     categoria_perdita: Optional[str] = Query(None),
     quinta_m: Optional[str] = Query(None),
@@ -193,7 +193,7 @@ async def get_action_plans(
     macchina: Optional[str] = Query(None),
     
     # Filtri parent / contesto
-    parent_type: Optional[str] = Query(None),
+    parent_type: Optional[List[str]] = Query(None),
     pillar_id: Optional[str] = Query(None),
     dashboard_id: Optional[str] = Query(None),
     gant_step_id: Optional[str] = Query(None),  # 🆕 filtro per step del Gant
@@ -221,11 +221,11 @@ async def get_action_plans(
     
     # Classificazione
     if stato:
-        query["stato"] = stato
+        query["stato"] = {"$in": stato}
     if tipo:
-        query["tipo"] = tipo
+        query["tipo"] = {"$in": tipo}
     if priorita:
-        query["priorita"] = priorita
+        query["priorita"] = {"$in": priorita}
     if categoria:
         query["categoria"] = categoria
     if categoria_perdita:
@@ -247,7 +247,24 @@ async def get_action_plans(
     
     # Contesto / parent
     if parent_type:
-        query["parent_type"] = parent_type
+        selected_parent_types = [value for value in parent_type if value != "standalone"]
+        parent_conditions = []
+
+        if selected_parent_types:
+            parent_conditions.append({"parent_type": {"$in": selected_parent_types}})
+
+        if "standalone" in parent_type:
+            parent_conditions.extend([
+                {"parent_type": "standalone"},
+                {"parent_type": None},
+                {"parent_type": ""},
+                {"parent_type": {"$exists": False}},
+            ])
+
+        if len(parent_conditions) == 1:
+            query.update(parent_conditions[0])
+        elif parent_conditions:
+            query["$and"] = query.get("$and", []) + [{"$or": parent_conditions}]
     if pillar_id:
         query["pillar_id"] = pillar_id
     if dashboard_id:
